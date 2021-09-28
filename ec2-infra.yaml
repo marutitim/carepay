@@ -1,0 +1,151 @@
+---
+# we declare all posible parameters that we are like to apply
+# across our infrastructure for concistency 
+Parameters:
+  SSHKey:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Default: care-key-pair 
+  cAppName:
+    Type: String
+    Description: Identify the applications that access the resources.
+    Default: care-pay-web-server
+  cAppId:
+    Type: String
+    Description: Identify the Owner ID of the application.
+    Default: OWNER_ID
+  cBudgetCentre:
+    Type: String
+    Description: Identify the cost center or Business Unit responsible for the application.
+    Default: BUDGET_CENTRE
+  cOwner:
+    Type: String
+    Description: Identify the Business owner.
+    Default: BUSINESS_OWNER
+  cOwnerTeam:
+    Type: String
+    Description: Identify the team responsible for the resource.
+    Default: Infrastructure team
+  cOwnerTeamEmail:
+    Type: String
+    Description: >-
+      Identify the email address for the team responsible for the resource. The
+      email should not be a personal email, it must be an anonymous email like a
+      distribution list.
+    Default: pleasechangeme@example.com
+  cDataClassification:
+    Type: String
+    Description: >-
+      Identify the specific data-confidentiality level a resource supports.
+      Identify which controls and policies should be applied to resources.
+    AllowedValues:
+      - Public
+      - Confidential
+      - Restricted
+      - Internal
+    Default: Confidential
+  cSupportContact:
+    Type: String
+    Description: The support contact email address.
+    Default: support@example.com
+  cEnvironment:
+    Type: String
+    AllowedValues:
+      - sandbox
+      - dev
+      - qa
+      - prod
+    Default: sandbox
+  cDepartment:
+    Type: String
+    Description: Identify the department responsible for the application.
+    Default: ICT team
+Resources:
+  cInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: ami-009d6802948d06e52
+      InstanceType: t2.micro
+      KeyName: !Ref SSHKey
+      SecurityGroups:
+        - !Ref cSSHSecurityGroup
+      # we install our web server with user data
+      UserData: !Base64 
+          'Fn::Sub': >
+            #!/bin/bash
+
+            sudo yum -y update
+
+            sudo amazon-linux-extras install nginx1 -y
+
+            sudo systemctl start nginx
+
+            sudo systemctl enable nginx
+
+            sudo chkconfig nginx on
+
+            echo "Hello Care Pay" | sudo tee /usr/share/nginx/html/index.html
+      Tags:
+            - Key: Name
+              Value: !Sub "${cAppName}-${cEnvironment}-instance"
+            - Key: BudgetCentre
+              Value: !Ref cBudgetCentre
+            - Key: AppName
+              Value: !Sub "${cAppName}-${cEnvironment}"
+            - Key: AppId
+              Value: !Ref cAppId
+            - Key: Department
+              Value: !Ref cDepartment
+            - Key: Environment
+              Value: !Ref cEnvironment
+            - Key: DataClassification
+              Value: !Ref cDataClassification
+            - Key: SupportContact
+              Value: !Ref cSupportContact
+            - Key: OwnerTeam
+              Value: !Ref cOwnerTeam
+            - Key: OwnerTeamEmail
+              Value: !Ref cOwnerTeamEmail
+            - Key: Owner
+              Value: !Ref cOwner
+  # our EC2 security group
+  cSSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSH and HTTP
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: 0.0.0.0/0
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+
+      Tags:
+        - Key: Name
+          Value: !Sub "${cAppName}-${cEnvironment}-sg"
+        - Key: BudgetCentre
+          Value: !Ref cBudgetCentre
+        - Key: AppName
+          Value: !Sub "${cAppName}-${cEnvironment}"
+        - Key: AppId
+          Value: !Ref cAppId
+        - Key: Department
+          Value: !Ref cDepartment
+        - Key: Environment
+          Value: !Ref cEnvironment
+        - Key: DataClassification
+          Value: !Ref cDataClassification
+        - Key: SupportContact
+          Value: !Ref cSupportContact
+        - Key: OwnerTeam
+          Value: !Ref cOwnerTeam
+        - Key: OwnerTeamEmail
+          Value: !Ref cOwnerTeamEmail
+        - Key: Owner
+          Value: !Ref cOwner
+  
+    
